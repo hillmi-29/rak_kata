@@ -1,0 +1,205 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '20.x'
+  DATABASE_URL: mysql://root:password@localhost:3306/bookstore_test
+  REDIS_URL: redis://localhost:6379
+  JWT_ACCESS_SECRET: test-access-secret-key-for-ci
+  JWT_REFRESH_SECRET: test-refresh-secret-key-for-ci
+  XENDIT_SECRET_KEY: test-xendit-secret
+  XENDIT_PUBLIC_KEY: test-xendit-public
+  XENDIT_WEBHOOK_TOKEN: test-webhook-token
+  SMTP_HOST: smtp.mailtrap.io
+  SMTP_PORT: 2525
+  SMTP_USER: test
+  SMTP_PASS: test
+  FRONTEND_URL: http://localhost:3000
+  SHOP_CITY_ID: 152
+  RAJAONGKIR_API_KEY: ''
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & TypeCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Run Prettier check
+        run: npx prettier --check .
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: bookstore_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost" --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=3s --health-retries=5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run tests
+        run: npm run test
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          REDIS_URL: ${{ env.REDIS_URL }}
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+
+  security-scan:
+    name: Security Scan (SAST/SCA)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high || true
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Run ESLint security plugin
+        run: npx eslint . --ext .ts --rule 'security/detect-non-literal-fs-filename: error' --rule 'security/detect-non-literal-regex: error' --rule 'security/detect-unsafe-regex: error' --rule 'security/detect-buffer-noassert: error' --rule 'security/detect-child-process: error' --rule 'security/detect-disable-mustache-escape: error' --rule 'security/detect-eval-with-expression: error' --rule 'security/detect-no-csrf-before-method-override: error' --rule 'security/detect-non-literal-require: error' --rule 'security/detect-possible-timing-attacks: error' --rule 'security/detect-pseudo-random-bytes: error' || true
+
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, unit-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build development image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.dev
+          push: false
+          tags: bookstore-api:dev
+          load: true
+
+      - name: Build production image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.prod
+          push: false
+          tags: bookstore-api:prod
+          load: true
+
+      - name: Test production image
+        run: |
+          docker run -d --name test-app -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e DATABASE_URL=mysql://root:password@host.docker.internal:3306/bookstore_test \
+            -e REDIS_URL=redis://host.docker.internal:6379 \
+            -e JWT_ACCESS_SECRET=test \
+            -e JWT_REFRESH_SECRET=test \
+            bookstore-api:prod
+          sleep 10
+          curl -f http://localhost:3000/health || exit 1
+          docker stop test-app
+          docker rm test-app
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging server
+        run: |
+          echo "Deploying to staging..."
+          # Add your staging deployment commands here
+          # Example: ssh user@staging-server "cd /app && docker-compose -f docker-compose.staging.yml pull && docker-compose -f docker-compose.staging.yml up -d"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production server
+        run: |
+          echo "Deploying to production..."
+          # Add your production deployment commands here
+          # Example: ssh user@prod-server "cd /app && docker-compose -f docker-compose.prod.yml pull && docker-compose -f docker-compose.prod.yml up -d"

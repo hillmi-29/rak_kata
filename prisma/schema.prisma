@@ -1,0 +1,301 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          Role      @default(USER)
+  emailVerified Boolean   @default(false)
+  avatar        String?
+  resetPasswordToken   String?   @unique
+  resetPasswordExpires DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  addresses     Address[]
+  cart          Cart?
+  orders        Order[]
+  reviews       Review[]
+  couponUsages  CouponUsage[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+}
+
+model Address {
+  id            String   @id @default(cuid())
+  userId        String
+  label         String   // "Home", "Office"
+  recipient     String
+  phone         String
+  address       String
+  province      String
+  provinceId    String?  // RajaOngkir / Biteship province_id
+  city          String
+  cityId        String?  // RajaOngkir / Biteship city_id
+  subdistrict   String?  // Kecamatan
+  subdistrictId String?  // Kecamatan ID
+  postalCode    String
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+
+  @@index([userId])
+  @@index([cityId])
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  books       Book[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Book {
+  id            String   @id @default(cuid())
+  title         String
+  slug          String   @unique
+  author        String
+  isbn          String?  @unique
+  description   String?  @db.Text
+  price         Int      // in IDR (Rupiah)
+  stock         Int      @default(0)
+  coverImage    String?
+  coverColor    String?  @default("#B3173B")
+  images        Json?    // array of image URLs stored as JSON
+  publisher     String?
+  publishedYear Int?
+  pages         Int?
+  weight        Int      @default(300) // in grams for shipping
+  dimensions    String?  // "20x14x2 cm"
+  language      String   @default("Indonesian")
+  isActive      Boolean  @default(true)
+  averageRating Float    @default(0)
+  reviewCount   Int      @default(0)
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([averageRating])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  bookId    String
+  qty       Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, bookId])
+  @@index([cartId])
+}
+
+model Order {
+  id              String       @id @default(cuid())
+  orderNumber     String       @unique // ORD-YYYYMMDD-XXXX
+  userId          String
+  status          OrderStatus  @default(PENDING)
+  subtotal        Int          // sum of items
+  shippingCost    Int          @default(0)
+  discount        Int          @default(0)
+  total           Int          // subtotal + shipping - discount
+  shippingAddress Json         // snapshot of address
+  billingAddress  Json?
+  notes           String?
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  trackingNumber  String?
+  courier         String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           OrderItem[]
+  payment         Payment?
+  addressId       String?
+  address         Address?     @relation(fields: [addressId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  bookId    String
+  qty       Int
+  price     Int    // price at time of order in IDR
+  bookTitle String // snapshot
+  bookCover String // snapshot
+
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  book      Book   @relation(fields: [bookId], references: [id])
+
+  @@index([orderId])
+  @@index([bookId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String        @unique
+  provider       String        @default("xendit")
+  providerRef    String        @unique // invoice_id from Xendit
+  status         PaymentStatus @default(PENDING)
+  amount         Int           // in IDR
+  currency       String        @default("IDR")
+  paymentMethod  String?       // "EWALLET", "VA", "QRIS", etc.
+  paymentChannel String?       // "OVO", "BCA", etc.
+  paidAt         DateTime?
+  expiredAt      DateTime?
+  invoiceUrl     String?
+  rawResponse    Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([providerRef])
+  @@index([status])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Review {
+  id               String   @id @default(cuid())
+  userId           String
+  bookId           String
+  rating           Int      // 1-5
+  comment          String?  @db.Text
+  verifiedPurchase Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book             Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([userId])
+}
+
+model Coupon {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  description String?
+  type        DiscountType @default(PERCENTAGE)
+  value       Int          // percent or fixed Rupiah
+  minSpend    Int          @default(0)
+  maxDiscount Int?
+  maxUsage    Int          @default(100)
+  usedCount   Int          @default(0)
+  isActive    Boolean      @default(true)
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  usages      CouponUsage[]
+
+  @@index([code])
+}
+
+model CouponUsage {
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([couponId])
+  @@index([userId])
+}

@@ -1,0 +1,140 @@
+name: DAST Security Scan
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday 2 AM
+  workflow_dispatch:
+
+jobs:
+  dast-scan:
+    name: DAST Scan with OWASP ZAP
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: bookstore_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost" --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=3s --health-retries=5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: mysql://root:password@localhost:3306/bookstore_test
+
+      - name: Start application
+        run: |
+          npm run build
+          npm run start &
+          sleep 15
+          curl -f http://localhost:3000/health
+        env:
+          NODE_ENV: production
+          DATABASE_URL: mysql://root:password@localhost:3306/bookstore_test
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: test-access-secret-key-for-dast
+          JWT_REFRESH_SECRET: test-refresh-secret-key-for-dast
+          XENDIT_SECRET_KEY: test-xendit-secret
+          XENDIT_WEBHOOK_TOKEN: test-webhook-token
+          FRONTEND_URL: http://localhost:3000
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.7.0
+        with:
+          target: 'http://localhost:3000'
+          rules: |
+            -w 10017  # Cross Site Scripting (Reflected) - warn
+            -w 10019  # Cross Site Scripting (Persistent) - warn
+            -w 10020  # XSS (DOM Based) - warn
+            -w 10021  # XSS (Post) - warn
+            -w 10022  # XSS (Referer) - warn
+            -w 10023  # XSS (Cookie) - warn
+            -w 10024  # XSS (User Agent) - warn
+            -w 10025  # XSS (Header) - warn
+            -w 10026  # XSS (XML) - warn
+            -w 10027  # XSS (SOAP) - warn
+            -w 10028  # XSS (JSON) - warn
+            -w 10029  # XSS (GraphQL) - warn
+            -w 10030  # XSS (WebSocket) - warn
+            -w 10031  # XSS (Server-Side) - warn
+            -w 10032  # XSS (Client-Side) - warn
+            -w 10033  # XSS (Mobile) - warn
+            -w 10034  # XSS (API) - warn
+            -w 10035  # XSS (Content-Type) - warn
+            -w 10036  # XSS (Content-Length) - warn
+            -w 10037  # XSS (Transfer-Encoding) - warn
+            -w 10038  # XSS (Content-Encoding) - warn
+            -w 10039  # XSS (Content-Disposition) - warn
+            -w 10040  # XSS (Content-Security-Policy) - warn
+            -w 10041  # XSS (X-Frame-Options) - warn
+            -w 10042  # XSS (X-Content-Type-Options) - warn
+            -w 10043  # XSS (X-XSS-Protection) - warn
+            -w 10044  # XSS (Strict-Transport-Security) - warn
+            -w 10045  # XSS (Content-Security-Policy-Report-Only) - warn
+            -w 10046  # XSS (Expect-CT) - warn
+            -w 10047  # XSS (Feature-Policy) - warn
+            -w 10048  # XSS (Referrer-Policy) - warn
+            -w 10049  # XSS (Permissions-Policy) - warn
+            -w 10050  # XSS (Cross-Origin-Embedder-Policy) - warn
+            -w 10051  # XSS (Cross-Origin-Opener-Policy) - warn
+            -w 10052  # XSS (Cross-Origin-Resource-Policy) - warn
+            -w 10053  # XSS (Origin-Agent-Cluster) - warn
+            -w 10054  # XSS (X-DNS-Prefetch-Control) - warn
+            -w 10055  # XSS (X-Download-Options) - warn
+            -w 10056  # XSS (X-Permitted-Cross-Domain-Policies) - warn
+            -w 10057  # XSS (X-Powered-By) - warn
+            -w 10058  # XSS (Server) - warn
+            -w 10059  # XSS (X-AspNet-Version) - warn
+            -w 10060  # XSS (X-AspNetMvc-Version) - warn
+          fail_action: false
+          cmd_options: '-t 300'
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: |
+            zap-report.html
+            zap-report.md
+          retention-days: 30
+
+      - name: Comment on PR with ZAP Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const reportPath = path.join(process.cwd(), 'zap-report.md');
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '## OWASP ZAP DAST Scan Results\n\n' + report
+              });
+            }
