@@ -125,8 +125,8 @@ export default function NotFound() {
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-20">
         <div className="error-content max-w-xl w-full text-center">
           <div className="error-code mb-6">
-            <span className="font-display text-[120px] sm:text-[160px] font-bold leading-none" style={{ color: 'var(--navy)' }}>
-              4<span className="relative inline-block" style={{ color: 'var(--cherry)' }}>0</span>4
+            <span className="font-display text-[120px] sm:text-[160px] font-bold leading-none tracking-tight" style={{ color: 'var(--navy)' }}>
+              404
             </span>
             <div
               className="w-24 h-1 mx-auto mt-4"
@@ -135,6 +135,11 @@ export default function NotFound() {
                 borderRadius: '9999px',
               }}
             />
+            <div className="mt-2 flex justify-center gap-1">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--navy)' }} />
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--cherry)' }} />
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--navy)' }} />
+            </div>
           </div>
 
           <h1 className="font-display text-3xl sm:text-4xl font-semibold mb-4" style={{ color: 'var(--navy)' }}>
