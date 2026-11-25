@@ -2,11 +2,11 @@
 
 import { useRef } from 'react';
 import Link from 'next/link';
-import { Heart, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { BookCover } from './book-cover';
+import { FavoriteToggle } from './favorite-toggle';
 import { Rating } from '@/components/ui/rating';
 import { useCart } from '@/lib/cart-context';
-import { useWishlist } from '@/lib/wishlist-context';
 import { cn, formatPrice, stockLabel } from '@/lib/format';
 import type { Book } from '@/lib/types';
 import type { SakugaButtonElement } from '@/types/sakuga';
@@ -19,11 +19,9 @@ interface BookCardProps {
 
 export function BookCard({ book, className, showStock = true }: BookCardProps) {
   const { addItem } = useCart();
-  const { has, toggle } = useWishlist();
   const addRef = useRef<SakugaButtonElement | null>(null);
   const addMobileRef = useRef<SakugaButtonElement | null>(null);
   const stock = stockLabel(book.stock);
-  const favorite = has(book.id);
 
   async function handleAdd(target: 'desktop' | 'mobile') {
     const ok = await addItem(book, 1);
@@ -50,17 +48,7 @@ export function BookCard({ book, className, showStock = true }: BookCardProps) {
           />
         </Link>
 
-        <button
-          type="button"
-          onClick={() => toggle(book)}
-          aria-label={favorite ? 'Hapus dari favorit' : 'Simpan ke favorit'}
-          className={cn(
-            'absolute right-2.5 top-2.5 z-10 grid h-8 w-8 place-items-center rounded-full border border-white/30 bg-cream/90 text-navy shadow-sm backdrop-blur transition hover:scale-105 hover:text-cherry',
-            favorite && 'bg-cherry text-white hover:text-white'
-          )}
-        >
-          <Heart className={cn('h-4 w-4', favorite && 'fill-current')} />
-        </button>
+        <FavoriteToggle book={book} className="absolute right-2.5 top-2.5 z-10" />
 
         {showStock && book.stock <= 5 && (
           <span

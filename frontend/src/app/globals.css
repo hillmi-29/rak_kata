@@ -211,6 +211,110 @@ sakuga-button::part(button):focus-visible {
   border-radius: 999px;
 }
 
+/* ---------- Favorite toggle (Sakuga checkbox, heart skin) ---------- */
+.fav-toggle {
+  --heart-outline: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2314213D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/%3E%3C/svg%3E");
+  --heart-cream: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FAF6EF' stroke='%23FAF6EF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/%3E%3C/svg%3E");
+  --heart-cherry: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23B3173B' stroke='%23B3173B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/%3E%3C/svg%3E");
+  --sk-bw: 0px;
+  --sk-sh: none;
+  --sk-card: transparent;
+  --sk-tick: transparent;
+  --sk-acc: #14213d;
+  display: inline-block;
+}
+
+.fav-toggle::part(label) {
+  gap: 8px;
+}
+
+.fav-toggle::part(box) {
+  border: 0;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: none;
+}
+
+/* Heart button on covers */
+.fav-toggle-icon {
+  transition: transform 0.2s ease;
+}
+
+.fav-toggle-icon:hover {
+  transform: scale(1.05);
+}
+
+.fav-toggle-icon::part(label) {
+  gap: 0;
+}
+
+.fav-toggle-icon::part(box) {
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background-color: rgba(250, 246, 239, 0.9);
+  background-image: var(--heart-outline);
+  background-size: 16px 16px;
+  box-shadow: 0 1px 2px rgba(20, 33, 61, 0.12);
+  backdrop-filter: blur(4px);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.fav-toggle-icon.is-fav::part(box) {
+  border-color: #b3173b;
+  background-color: #b3173b;
+  background-image: var(--heart-cream);
+}
+
+/* Wide favorite button on the book detail page */
+.fav-toggle-wide {
+  --sk-acc: transparent;
+  display: block;
+  flex: 1;
+}
+
+.fav-toggle-wide::part(label) {
+  justify-content: center;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--navy);
+  font-family: 'Source Sans 3', 'Trebuchet MS', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.fav-toggle-wide:hover::part(label) {
+  border-color: rgba(20, 33, 61, 0.35);
+  background: #fff;
+}
+
+.fav-toggle-wide::part(label):focus-within {
+  outline: 2.5px solid #14213d;
+  outline-offset: 3px;
+}
+
+.fav-toggle-wide.is-fav::part(label) {
+  color: var(--cherry);
+}
+
+.fav-toggle-wide::part(box) {
+  width: 16px;
+  height: 16px;
+  background-image: var(--heart-outline);
+  background-size: contain;
+}
+
+.fav-toggle-wide.is-fav::part(box) {
+  background-image: var(--heart-cherry);
+}
+
 .sakuga-full {
   display: block;
   width: 100%;

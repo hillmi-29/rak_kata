@@ -11,6 +11,7 @@ import { cn, formatPrice, stockLabel } from '@/lib/format';
 import type { Book } from '@/lib/types';
 import { AccountLayout } from '@/components/layout/account-layout';
 import { BookCover } from '@/components/books/book-cover';
+import { FavoriteToggle } from '@/components/books/favorite-toggle';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useCart } from '@/lib/cart-context';
 import type { SakugaButtonElement } from '@/types/sakuga';
@@ -98,10 +99,9 @@ export default function AccountFavoritesPage() {
 
 function FavoriteCard({ book }: { book: Book }) {
   const { addItem } = useCart();
-  const { has, toggle, remove } = useWishlist();
+  const { remove } = useWishlist();
   const addRef = useRef<SakugaButtonElement | null>(null);
   const stock = stockLabel(book.stock);
-  const favorite = has(book.id);
 
   async function handleAdd() {
     const ok = await addItem(book, 1);
@@ -123,17 +123,7 @@ function FavoriteCard({ book }: { book: Book }) {
           />
         </Link>
 
-        <button
-          type="button"
-          onClick={() => toggle(book)}
-          className={cn(
-            'absolute right-2.5 top-2.5 z-10 grid h-8 w-8 place-items-center rounded-full border border-white/30 bg-cream/90 text-navy shadow-sm backdrop-blur transition hover:scale-105 hover:text-cherry',
-            favorite && 'bg-cherry text-white hover:text-white'
-          )}
-          aria-label={favorite ? 'Hapus dari favorit' : 'Simpan ke favorit'}
-        >
-          <Heart className={cn('h-4 w-4', favorite && 'fill-current')} />
-        </button>
+        <FavoriteToggle book={book} className="absolute right-2.5 top-2.5 z-10" />
 
         {book.stock <= 5 && book.stock > 0 && (
           <span className="absolute left-2.5 top-2.5 z-10 rounded-full bg-warning/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">

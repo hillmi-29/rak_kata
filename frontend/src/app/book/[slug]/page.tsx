@@ -10,7 +10,6 @@ import {
   BookOpen,
   Check,
   ChevronRight,
-  Heart,
   Package,
   RotateCcw,
   Share2,
@@ -22,7 +21,6 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
 import { useToast } from '@/lib/toast-context';
-import { useWishlist } from '@/lib/wishlist-context';
 import {
   cn,
   formatPrice,
@@ -40,6 +38,7 @@ import type {
   Review,
 } from '@/lib/types';
 import { BookCover } from '@/components/books/book-cover';
+import { FavoriteToggle } from '@/components/books/favorite-toggle';
 import { Spine } from '@/components/books/spine';
 import { Rating } from '@/components/ui/rating';
 import { Modal } from '@/components/ui/modal';
@@ -62,7 +61,6 @@ export default function BookDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { addItem } = useCart();
-  const { has, toggle } = useWishlist();
   const { success, error } = useToast();
 
   const [book, setBook] = useState<BookDetail | null>(null);
@@ -123,7 +121,6 @@ export default function BookDetailPage() {
   }, [slug]);
 
   const stock = book ? stockLabel(book.stock) : null;
-  const favorite = book ? has(book.id) : false;
   const theme = book ? coverTheme(book.slug, book.coverColor) : null;
 
   const reviewStats = useMemo(() => {
@@ -479,17 +476,7 @@ export default function BookDetailPage() {
               </div>
 
               <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => toggle(book)}
-                  className={cn(
-                    'btn-ghost btn-sm flex-1 border border-line bg-white/60',
-                    favorite && 'text-cherry'
-                  )}
-                >
-                  <Heart className={cn('h-4 w-4', favorite && 'fill-current')} />
-                  {favorite ? 'Tersimpan di favorit' : 'Simpan ke favorit'}
-                </button>
+                <FavoriteToggle book={book} variant="wide" />
                 <button
                   type="button"
                   onClick={copyLink}

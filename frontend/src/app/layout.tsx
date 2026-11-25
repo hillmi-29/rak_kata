@@ -37,6 +37,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <script src="/button.js" defer />
         <script src="/sakuga-theme.js" defer />
+        <script src="/sakuga-checkbox-filter.js" defer />
+        <script src="/checkbox.js" defer />
       </head>
       <body>
         <Providers>

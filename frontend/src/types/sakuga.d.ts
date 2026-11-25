@@ -4,6 +4,13 @@ export interface SakugaButtonElement extends HTMLElement {
   disabled: boolean;
 }
 
+export interface SakugaCheckboxElement extends HTMLElement {
+  checked: boolean;
+  disabled: boolean;
+  value: string;
+  name: string;
+}
+
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
@@ -14,6 +21,15 @@ declare module 'react' {
         variant?: 'primary' | 'secondary';
         type?: 'button' | 'submit';
         disabled?: boolean;
+      };
+      'sakuga-checkbox': React.DetailedHTMLProps<
+        React.HTMLAttributes<SakugaCheckboxElement>,
+        SakugaCheckboxElement
+      > & {
+        checked?: boolean;
+        disabled?: boolean;
+        name?: string;
+        value?: string;
       };
     }
   }
