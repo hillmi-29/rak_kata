@@ -35,6 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Fraunces:opsz,wght@9..144,300..900&family=Source+Sans+3:wght@300..700&display=swap"
           rel="stylesheet"
         />
+        <script src="/button.js" defer />
+        <script src="/sakuga-theme.js" defer />
       </head>
       <body>
         <Providers>

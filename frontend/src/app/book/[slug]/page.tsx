@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
@@ -15,7 +15,6 @@ import {
   RotateCcw,
   Share2,
   ShieldCheck,
-  ShoppingBag,
   Star,
   Truck,
 } from 'lucide-react';
@@ -45,6 +44,7 @@ import { Spine } from '@/components/books/spine';
 import { Rating } from '@/components/ui/rating';
 import { Modal } from '@/components/ui/modal';
 import { QtyStepper } from '@/components/ui/qty-stepper';
+import type { SakugaButtonElement } from '@/types/sakuga';
 
 type GalleryView = 'front' | 'spine' | 'back' | 'inside';
 type TabKey = 'deskripsi' | 'detail' | 'ulasan';
@@ -66,6 +66,8 @@ export default function BookDetailPage() {
   const { success, error } = useToast();
 
   const [book, setBook] = useState<BookDetail | null>(null);
+  const addRef = useRef<SakugaButtonElement | null>(null);
+  const addMobileRef = useRef<SakugaButtonElement | null>(null);
   const [similar, setSimilar] = useState<Book[]>([]);
   const [distribution, setDistribution] = useState<RatingDistribution | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,7 +140,11 @@ export default function BookDetailPage() {
     if (!book) return;
     setAdding(true);
     try {
-      await addItem(book, qty);
+      const ok = await addItem(book, qty);
+      if (ok) {
+        addRef.current?.done();
+        addMobileRef.current?.done();
+      }
     } finally {
       setAdding(false);
     }
@@ -453,15 +459,14 @@ export default function BookDetailPage() {
               </div>
 
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
+                <sakuga-button
+                  ref={addRef}
                   onClick={handleAddToCart}
                   disabled={book.stock <= 0 || adding}
-                  className="btn-primary btn-lg"
+                  className="sakuga-lg sakuga-full"
                 >
-                  <ShoppingBag className="h-4 w-4" />
-                  {book.stock <= 0 ? 'Stok Habis' : adding ? 'Menambahkan...' : 'Tambah ke Keranjang'}
-                </button>
+                  {book.stock <= 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+                </sakuga-button>
                 <button
                   type="button"
                   onClick={handleBuyNow}
@@ -830,15 +835,14 @@ export default function BookDetailPage() {
           >
             {book.stock <= 0 ? 'Habis' : buying ? '...' : 'Beli'}
           </button>
-          <button
-            type="button"
+          <sakuga-button
+            ref={addMobileRef}
             onClick={handleAddToCart}
             disabled={book.stock <= 0 || adding}
-            className="btn-secondary shrink-0 px-4"
+            className="sakuga-compact shrink-0"
           >
-            <ShoppingBag className="h-4 w-4" />
             Keranjang
-          </button>
+          </sakuga-button>
         </div>
       </div>
 

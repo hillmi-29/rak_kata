@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Heart, Trash2 } from 'lucide-react';
+import { ArrowRight, Heart, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useWishlist } from '@/lib/wishlist-context';
@@ -13,6 +13,7 @@ import { AccountLayout } from '@/components/layout/account-layout';
 import { BookCover } from '@/components/books/book-cover';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useCart } from '@/lib/cart-context';
+import type { SakugaButtonElement } from '@/types/sakuga';
 
 export default function AccountFavoritesPage() {
   const { user } = useAuth();
@@ -98,8 +99,14 @@ export default function AccountFavoritesPage() {
 function FavoriteCard({ book }: { book: Book }) {
   const { addItem } = useCart();
   const { has, toggle, remove } = useWishlist();
+  const addRef = useRef<SakugaButtonElement | null>(null);
   const stock = stockLabel(book.stock);
   const favorite = has(book.id);
+
+  async function handleAdd() {
+    const ok = await addItem(book, 1);
+    if (ok) addRef.current?.done();
+  }
 
   return (
     <article className="group relative flex flex-col">
@@ -160,15 +167,14 @@ function FavoriteCard({ book }: { book: Book }) {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => addItem(book, 1)}
+            <sakuga-button
+              ref={addRef}
+              onClick={handleAdd}
               disabled={book.stock <= 0}
-              className="btn-primary btn-sm px-3"
+              className="sakuga-compact"
             >
-              <BookOpen className="h-3.5 w-3.5" />
               Beli
-            </button>
+            </sakuga-button>
             <button
               type="button"
               onClick={() => remove(book.id)}

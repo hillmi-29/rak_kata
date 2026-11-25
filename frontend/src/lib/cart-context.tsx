@@ -20,7 +20,7 @@ interface CartContextValue {
   totalWeight: number;
   loading: boolean;
   isGuest: boolean;
-  addItem: (book: Book | CartBook, qty?: number) => Promise<void>;
+  addItem: (book: Book | CartBook, qty?: number) => Promise<boolean>;
   updateQty: (item: DisplayCartItem, qty: number) => Promise<void>;
   removeItem: (item: DisplayCartItem) => Promise<void>;
   clear: () => Promise<void>;
@@ -153,10 +153,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addItem = useCallback(
-    async (book: Book | CartBook, qty: number = 1) => {
+    async (book: Book | CartBook, qty: number = 1): Promise<boolean> => {
       if (book.stock <= 0) {
         error('Maaf, stok buku ini sedang habis');
-        return;
+        return false;
       }
 
       if (user) {
@@ -164,10 +164,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           await api.post('/cart/items', { bookId: book.id, qty });
           await refresh();
           success(`"${book.title}" ditambahkan ke keranjang`);
+          return true;
         } catch (err) {
           error(err instanceof Error ? err.message : 'Gagal menambahkan ke keranjang');
+          return false;
         }
-        return;
       }
 
       const lines = readGuestCart();
@@ -177,19 +178,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const nextQty = existing.qty + qty;
         if (nextQty > book.stock) {
           error(`Stok tersisa ${book.stock}`);
-          return;
+          return false;
         }
         existing.qty = nextQty;
       } else {
         if (qty > book.stock) {
           error(`Stok tersisa ${book.stock}`);
-          return;
+          return false;
         }
         lines.push({ book: cartBook, qty });
       }
       writeGuestCart(lines);
       setGuestLines(lines);
       success(`"${book.title}" ditambahkan ke keranjang`);
+      return true;
     },
     [user, refresh, success, error]
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -25,6 +25,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { Drawer } from '@/components/ui/drawer';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useCart } from '@/lib/cart-context';
+import type { SakugaButtonElement } from '@/types/sakuga';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Terbaru' },
@@ -78,6 +79,7 @@ function CatalogContent() {
   const searchParams = useSearchParams();
   const applied = useAppliedFilters();
   const { addItem } = useCart();
+  const quickAddRef = useRef<SakugaButtonElement | null>(null);
 
   const [books, setBooks] = useState<Book[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -206,6 +208,12 @@ function CatalogContent() {
   function switchView(view: 'grid' | 'shelf') {
     if (view === applied.view) return;
     updateQuery({ view: view === 'shelf' ? 'shelf' : undefined });
+  }
+
+  async function handleQuickAdd() {
+    if (!selected) return;
+    const ok = await addItem(selected, 1);
+    if (ok) quickAddRef.current?.done();
   }
 
   const groupedShelves = useMemo(() => {
@@ -586,14 +594,14 @@ function CatalogContent() {
               <Link href={`/book/${selected.slug}`} className="btn-secondary flex-1">
                 Lihat Detail
               </Link>
-              <button
-                type="button"
-                onClick={() => addItem(selected, 1)}
+              <sakuga-button
+                ref={quickAddRef}
+                onClick={handleQuickAdd}
                 disabled={selected.stock <= 0}
-                className="btn-primary flex-1"
+                className="sakuga-compact sakuga-full flex-1"
               >
                 {selected.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis'}
-              </button>
+              </sakuga-button>
             </div>
           )
         }

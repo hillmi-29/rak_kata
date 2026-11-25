@@ -1,13 +1,15 @@
 'use client';
 
+import { useRef } from 'react';
 import Link from 'next/link';
-import { Heart, Plus, ShoppingBag } from 'lucide-react';
+import { Heart, Plus } from 'lucide-react';
 import { BookCover } from './book-cover';
 import { Rating } from '@/components/ui/rating';
 import { useCart } from '@/lib/cart-context';
 import { useWishlist } from '@/lib/wishlist-context';
 import { cn, formatPrice, stockLabel } from '@/lib/format';
 import type { Book } from '@/lib/types';
+import type { SakugaButtonElement } from '@/types/sakuga';
 
 interface BookCardProps {
   book: Book;
@@ -18,8 +20,14 @@ interface BookCardProps {
 export function BookCard({ book, className, showStock = true }: BookCardProps) {
   const { addItem } = useCart();
   const { has, toggle } = useWishlist();
+  const addRef = useRef<SakugaButtonElement | null>(null);
   const stock = stockLabel(book.stock);
   const favorite = has(book.id);
+
+  async function handleAdd() {
+    const ok = await addItem(book, 1);
+    if (ok) addRef.current?.done();
+  }
 
   return (
     <article className={cn('group relative flex flex-col', className)}>
@@ -64,14 +72,16 @@ export function BookCard({ book, className, showStock = true }: BookCardProps) {
         )}
 
         {book.stock > 0 && (
-          <button
-            type="button"
-            onClick={() => addItem(book, 1)}
-            className="absolute bottom-3 left-1/2 z-10 hidden w-[calc(100%-1.5rem)] -translate-x-1/2 translate-y-2 items-center justify-center gap-2 rounded-lg bg-navy px-3 py-2.5 text-xs font-semibold text-cream opacity-0 shadow-lg transition duration-300 hover:bg-cherry group-hover:translate-y-0 group-hover:opacity-100 sm:flex"
-          >
-            <ShoppingBag className="h-3.5 w-3.5" />
-            Tambah ke Keranjang
-          </button>
+          <div className="absolute bottom-3 left-1/2 z-10 hidden w-[calc(100%-1.5rem)] -translate-x-1/2 translate-y-2 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:block">
+            <sakuga-button
+              ref={addRef}
+              onClick={handleAdd}
+              disabled={book.stock <= 0}
+              className="sakuga-compact sakuga-full"
+            >
+              Tambah ke Keranjang
+            </sakuga-button>
+          </div>
         )}
       </div>
 

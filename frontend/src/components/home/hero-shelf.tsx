@@ -8,7 +8,6 @@ import {
   ArrowRight,
   BookOpen,
   MousePointer2,
-  ShoppingBag,
   Sparkles,
   Star,
   X,
@@ -19,6 +18,7 @@ import { Rating } from '@/components/ui/rating';
 import { useCart } from '@/lib/cart-context';
 import { cn, formatPrice } from '@/lib/format';
 import type { Book } from '@/lib/types';
+import type { SakugaButtonElement } from '@/types/sakuga';
 
 interface HeroShelfProps {
   books: Book[];
@@ -28,7 +28,18 @@ interface HeroShelfProps {
 export function HeroShelf({ books, loading }: HeroShelfProps) {
   const [selected, setSelected] = useState<Book | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const addRef = useRef<SakugaButtonElement | null>(null);
+  const addMobileRef = useRef<SakugaButtonElement | null>(null);
   const { addItem } = useCart();
+
+  async function handleAdd() {
+    if (!selected) return;
+    const ok = await addItem(selected, 1);
+    if (ok) {
+      addRef.current?.done();
+      addMobileRef.current?.done();
+    }
+  }
 
   const fiksi = books.filter(book => ['fiksi', 'sastra'].includes(book.category?.slug || '')).slice(0, 7);
   const nonFiksi = books.filter(book => ['non-fiksi', 'pengembangan-diri', 'bisnis'].includes(book.category?.slug || '')).slice(0, 7);
@@ -232,15 +243,14 @@ export function HeroShelf({ books, loading }: HeroShelfProps) {
                         Lihat Detail
                         <ArrowRight className="h-4 w-4" />
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => addItem(selected, 1)}
-                        className="btn-secondary w-full"
+                      <sakuga-button
+                        ref={addRef}
+                        onClick={handleAdd}
                         disabled={selected.stock <= 0}
+                        className="sakuga-compact sakuga-full"
                       >
-                        <ShoppingBag className="h-4 w-4" />
                         Tambah ke Keranjang
-                      </button>
+                      </sakuga-button>
                     </div>
                   </motion.aside>
                 </div>
@@ -332,15 +342,14 @@ export function HeroShelf({ books, loading }: HeroShelfProps) {
                 <Link href={`/book/${selected.slug}`} className="btn-primary flex-1">
                   Lihat Detail
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => addItem(selected, 1)}
-                  className="btn-secondary flex-1"
+                <sakuga-button
+                  ref={addMobileRef}
+                  onClick={handleAdd}
                   disabled={selected.stock <= 0}
+                  className="sakuga-compact sakuga-full flex-1"
                 >
-                  <ShoppingBag className="h-4 w-4" />
                   Keranjang
-                </button>
+                </sakuga-button>
               </div>
             </motion.div>
           </div>
