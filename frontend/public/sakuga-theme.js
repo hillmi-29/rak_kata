@@ -9,5 +9,8 @@
   P.line = '#14213D'; // outline (--navy)
   P.accent = '#B3173B'; // accents, needles, check (--cherry)
   P.ink = '#14213D';
-  P.sfx = ['#14213D', '#FAF6EF']; // lettering fill navy, edge cream
+  // Keep the impact animation, but draw no sound-effect lettering.
+  // The checkbox's ズザッ is filtered separately because its dotted style
+  // hardcodes an edge colour and ignores this palette.
+  P.sfx = ['transparent', 'transparent'];
 })();
