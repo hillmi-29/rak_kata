@@ -21,12 +21,14 @@ export function BookCard({ book, className, showStock = true }: BookCardProps) {
   const { addItem } = useCart();
   const { has, toggle } = useWishlist();
   const addRef = useRef<SakugaButtonElement | null>(null);
+  const addMobileRef = useRef<SakugaButtonElement | null>(null);
   const stock = stockLabel(book.stock);
   const favorite = has(book.id);
 
-  async function handleAdd() {
+  async function handleAdd(target: 'desktop' | 'mobile') {
     const ok = await addItem(book, 1);
-    if (ok) addRef.current?.done();
+    if (!ok) return;
+    (target === 'desktop' ? addRef : addMobileRef).current?.done();
   }
 
   return (
@@ -75,7 +77,7 @@ export function BookCard({ book, className, showStock = true }: BookCardProps) {
           <div className="absolute bottom-3 left-1/2 z-10 hidden w-[calc(100%-1.5rem)] -translate-x-1/2 translate-y-2 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:block">
             <sakuga-button
               ref={addRef}
-              onClick={handleAdd}
+              onClick={() => handleAdd('desktop')}
               disabled={book.stock <= 0}
               className="sakuga-compact sakuga-full"
             >
@@ -107,15 +109,16 @@ export function BookCard({ book, className, showStock = true }: BookCardProps) {
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => addItem(book, 1)}
+          <sakuga-button
+            ref={addMobileRef}
+            onClick={() => handleAdd('mobile')}
             disabled={book.stock <= 0}
             aria-label={`Tambah ${book.title} ke keranjang`}
-            className="grid h-8 w-8 place-items-center rounded-full border border-line bg-white text-navy transition hover:border-cherry hover:bg-cherry hover:text-white disabled:opacity-40 sm:hidden"
+            className="sakuga-icon shrink-0 sm:hidden"
           >
-            <Plus className="h-4 w-4" />
-          </button>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">Tambah {book.title} ke keranjang</span>
+          </sakuga-button>
         </div>
       </div>
     </article>

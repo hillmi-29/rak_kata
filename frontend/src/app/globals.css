@@ -196,6 +196,21 @@ sakuga-button::part(button):focus-visible {
   padding: 9px 14px;
 }
 
+/* Icon-only variant (mobile card quick add) */
+.sakuga-icon {
+  --sk-btn-sh: 2px 3px 0 #e6dfd3;
+}
+
+.sakuga-icon::part(button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 999px;
+}
+
 .sakuga-full {
   display: block;
   width: 100%;
